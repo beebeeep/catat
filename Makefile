@@ -9,4 +9,5 @@ all: $(PROG).c
 
 clean: 
 	rm -f *.o $(PROG)
+	rm -f $(PROG)
 
