@@ -15,6 +15,10 @@
 #define ADDR_BC ((r.B << 8) + r.C)
 #define ADDR_DE ((r.D << 8) + r.E)
 #define ADDR_HL ((r.H << 8) + r.L)
+#define ADDR(LO, HI) (((HI) << 8) + (LO))
+
+
+#define IS_BDH(x) ((x) == REG_B || (x) == REG_D || (x) == REG_H)
 
 
 struct {
@@ -25,7 +29,7 @@ struct {
     uint8_t E;
     uint8_t H;
     uint8_t L;
-    struct {
+    /*struct {
         unsigned int s:1;
         unsigned int z:1;
         unsigned int nul1:1;
@@ -34,7 +38,8 @@ struct {
         unsigned int p:1;
         unsigned int one:1;
         unsigned int c:1;
-    } F;
+    } F;*/
+    uint8_t F;
     uint16_t SP;
     uint16_t PC;
 } r;
@@ -57,15 +62,15 @@ void fail(void) {
 uint8_t *get_reg(uint8_t code) {
 
     switch(code) {
-        case 0: { return &(r.B); } break;
-        case 1: { return &(r.C); } break;
-        case 2: { return &(r.D); } break;
-        case 3: { return &(r.E); } break;
-        case 4: { return &(r.H); } break;
-        case 5: { return &(r.L); } break;
+        case REG_B: { return &(r.B); } break;
+        case REG_C: { return &(r.C); } break;
+        case REG_D: { return &(r.D); } break;
+        case REG_E: { return &(r.E); } break;
+        case REG_H: { return &(r.H); } break;
+        case REG_L: { return &(r.L); } break;
         //pseudo-register M = memory cell addressed by H & L registers
-        case 6: { return &( mem[ADDR_HL] ); } break;
-        case 7: { return &(r.A); } break;
+        case REG_M: { return &( mem[ADDR_HL] ); } break;
+        case REG_A: { return &(r.A); } break;
         default: { fail(); return NULL; }
     }
 }
@@ -105,7 +110,7 @@ void lxi(uint8_t Ri, uint8_t data_l, uint8_t data_h)
  * +-+-+-+-+-+-+-+-+
  * 7               0
  */
-    if(Ri == REG_B || Ri == REG_D || Ri == REG_H) {
+    if(IS_BDH(Ri)) {
         *(get_reg(Ri+1)) = data_l;
         *(get_reg(Ri)) = data_h;
     } else {
@@ -145,4 +150,182 @@ void ldax(uint8_t Ri) {
         fail();
     }
     r.PC += 1;
+}
+
+void sta(uint8_t addr_l, uint8_t addr_h)
+{
+/* +-+-+-+-+-+-+-+-+
+ * |0|0|1|1|0|0|1|0|
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| LSB
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| MSB
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    mem[ADDR(addr_l, addr_h)] = r.A;
+    r.PC += 3;
+}
+
+void lda(uint8_t addr_l, uint8_t addr_h)
+{
+/* +-+-+-+-+-+-+-+-+
+ * |0|0|1|1|1|0|1|0|
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| LSB
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| MSB
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    r.A = mem[ADDR(addr_l, addr_h)];
+    r.PC += 3;
+}
+
+void shld(uint8_t addr_l, uint8_t addr_h)
+{
+/* +-+-+-+-+-+-+-+-+
+ * |0|0|1|0|0|0|1|0|
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| LSB
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| MSB
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    mem[ADDR(addr_l, addr_h)] = r.L;
+    mem[ADDR(addr_l+1, addr_h)] = r.H;
+    r.PC += 3;
+}
+
+void lhld(uint8_t addr_l, uint8_t addr_h)
+{
+/* +-+-+-+-+-+-+-+-+
+ * |0|0|1|0|0|0|1|0|
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| LSB
+ * +-+-+-+-+-+-+-+-+
+ * |d|d|d|d|d|d|d|d| MSB
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    r.L = mem[ADDR(addr_l, addr_h)];
+    r.H = mem[ADDR(addr_l+1, addr_h)];
+    r.PC += 3;
+}
+
+void push(uint8_t Ri) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|i|i|i|1|0|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    if(IS_BDH(Ri)) {
+        mem[--r.SP] = *(get_reg(Ri));
+        mem[--r.SP] = *(get_reg(Ri+1));
+    } else {
+        fail();
+    }
+    r.PC += 1;
+}
+
+void push_psw(void) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|1|1|0|1|0|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    mem[--r.SP] = r.A;
+    mem[--r.SP] = r.F;
+    r.PC += 1;
+}
+
+void pop(uint8_t Ri) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|i|i|i|0|0|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    if(IS_BDH(Ri)) {
+        *(get_reg(Ri+1)) = mem[++r.SP];
+        *(get_reg(Ri)) = mem[++r.SP];
+    } else {
+        fail();
+    }
+    r.PC += 1;
+}
+
+void pop_psw(void) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|1|1|0|0|0|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    mem[--r.SP] = r.F;
+    mem[--r.SP] = r.A;
+    r.PC += 1;
+}
+
+void xchg(void) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|1|0|1|0|1|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    r.H = r.H ^ r.D; 
+    r.D = r.H ^ r.D;
+    r.H = r.H ^ r.D;
+
+    r.L = r.L ^ r.E; 
+    r.E = r.L ^ r.E;
+    r.L = r.L ^ r.E;
+
+    r.PC += 1;
+}
+
+void xthl(void) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|1|0|0|0|1|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    r.L = r.L ^ mem[r.SP]; 
+    mem[r.SP] = r.L ^ mem[r.SP];
+    r.L = r.L ^ mem[r.SP];
+
+    r.SP++; 
+
+    r.H = r.H ^ mem[r.SP]; 
+    mem[r.SP] = r.H ^ mem[r.SP];
+    r.H = r.H ^ mem[r.SP];
+
+    r.PC += 1;
+}
+
+void sphl(void) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|1|1|1|0|0|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    r.SP = ADDR(r.L, r.H);
+
+    r.PC += 1;
+}
+
+void pchl(void) 
+{
+/* +-+-+-+-+-+-+-+-+
+ * |1|1|1|0|1|0|0|1|
+ * +-+-+-+-+-+-+-+-+
+ * 7               0
+ */
+    r.PC = ADDR(r.L, r.H);
 }
