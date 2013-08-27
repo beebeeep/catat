@@ -462,11 +462,9 @@ void sub(uint8_t Ri)
     if(carry) SET_Tc(r.F);
     else RESET_Tc(r.F);
 
-    uint8_t half_carry = ((r.A & 0x0f) > 0x0f - (comp2 & 0x0f));
-    /* half carry bit must be set if there borrow occured,
-     * i.e. there were NO carry out in low tetrad after adding
-     * two-complement number */ 
-    if(!half_carry) SET_Th(r.F);
+    //uint8_t half_carry = ((r.A & 0x0f) >= 0x0f - (comp2 & 0x0f));
+    uint8_t half_carry = ((r.A & 0x0f) < (*get_reg(Ri) & 0x0f));
+    if(half_carry) SET_Th(r.F);
     else RESET_Th(r.F);
 
     r.A = r.A + comp2;
