@@ -1,13 +1,18 @@
-PROG=catat
+EXECUTABLE=catat
+SOURCES=catat.c misc.c opcodes.c
+OBJECTS=$(SOURCES:.c=.o)
+
 CC=gcc
 LD=gcc -o
-CFLAGS=-Wall -g 
+CFLAGS=-std=gnu99 -Wall -Werror -pedantic -g
 
-all: $(PROG).c 
-	$(CC) $(CFLAGS) $(FUSEFLAGS) -c $(PROG).c
-	$(LD) $(CFLAGS) $(FUSEFLAGS) -o $(PROG) $(PROG).o 
+all: $(EXECUTABLE) $(OBJECTS) 
+
+$(EXECUTABLE): $(OBJECTS)
+	$(LD) $(CFLAGS) -o $@ $(OBJECTS) 
+
+*.o:
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean: 
-	rm -f *.o $(PROG)
-	rm -f $(PROG)
-
+	rm -f $(OBJECTS) $(EXECUTABLE) 
