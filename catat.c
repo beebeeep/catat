@@ -9,64 +9,92 @@
 #include "opcodes.h"
 
 
+void test_rar(void)
+{
+    for(;;) {
+        r.A = rand()%256; 
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        rar(); printf("rar A\n");
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        printf("\n=============================\n");
+    }
+}
+
+void test_ral(void)
+{
+    for(;;) {
+        r.A = rand()%256; 
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        ral(); printf("ral A\n");
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        printf("\n=============================\n");
+    }
+}
+
+void test_rrc(void)
+{
+    for(;;) {
+        r.A = rand()%256; 
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        rrc(); printf("rrc A\n");
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        printf("\n=============================\n");
+    }
+}
 
 void test_rlc(void)
 {
-  for(;;) {
-    r.A = rand()%256; 
-    bdump8(r.A);
-    printf("Tc is %u\n", F_CARRY(r.F));
-    rlc();
-    bdump8(r.A);
-    printf("Tc is %u\n=======\n", F_CARRY(r.F));
-
-  }
-
+    for(;;) {
+        r.A = rand()%256; 
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        rlc(); printf("rlc A\n");
+        printf("A = (%hhu) %s, Tc = %hhu\n", r.A, itoab8(r.A), F_CARRY(r.F) );
+        printf("\n=============================\n");
+    }
 }
 
 void test_add(void)
 {
-  for(;;) { 
+    for(;;) { 
 
-    r.A = rand()%256;
-    r.B = rand()%256;
-    printf("%hhu + %hhu = %hhu\n", r.A, r.B, (uint8_t)(r.A + r.B));
-    bdump8(r.A);
-    bdump8(r.B);
-    add(REG_B);
-    printf("-----------\n");
-    bdump8(r.A);
-    dump_flags(r.F);
-    printf("\n=======================================\n");
-  }
+        r.A = rand()%256;
+        r.B = rand()%256;
+        printf("%hhu + %hhu = %hhu\n", r.A, r.B, (uint8_t)(r.A + r.B));
+        bdump8(r.A);
+        bdump8(r.B);
+        add(REG_B);
+        printf("-----------\n");
+        bdump8(r.A);
+        dump_flags(r.F);
+        printf("\n=======================================\n");
+    }
 }
 
 
 void test_sub(void)
 {
-  for(;;) { 
-    r.A = rand()%256;
-    r.B = rand()%256;
-    printf("%hhu - %hhu = %hhu\n", r.A, r.B, (uint8_t)(r.A - r.B));
-    bdump8(r.A);
-    bdump8(r.B);
-    sub(REG_B);
-    printf("-----------\n");
-    bdump8(r.A);
-    dump_flags(r.F);
-    printf("\n=======================================\n");
-  }
+    for(;;) { 
+        r.A = rand()%256;
+        r.B = rand()%256;
+        printf("%hhu - %hhu = %hhu\n", r.A, r.B, (uint8_t)(r.A - r.B));
+        bdump8(r.A);
+        bdump8(r.B);
+        sub(REG_B);
+        printf("-----------\n");
+        bdump8(r.A);
+        dump_flags(r.F);
+        printf("\n=======================================\n");
+    }
 }
 
 int main (int argc, char *argv[])
 {
-  bzero(&r, sizeof(r));
-  bzero(mem, sizeof(mem));
-  r.F = 0x02;
+    bzero(&r, sizeof(r));
+    bzero(mem, sizeof(mem));
+    r.F = 0x02;
 
-  /* test_rlc(); */
+    test_rar(); 
 
-  printf("%s\n", itoab8(0x80));
-  printf("ok\n");
-  return 0;
+    printf("ok\n");
+    return 0;
 }
