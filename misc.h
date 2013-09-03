@@ -12,10 +12,13 @@
 #define REG_L 5
 #define REG_M 6
 
-#define ADDR_BC         ((r.B << 8) + r.C)
-#define ADDR_DE         ((r.D << 8) + r.E)
-#define ADDR_HL         ((r.H << 8) + r.L)
-#define ADDR(LO, HI)    (((HI) << 8) + (LO))
+#define MERGE_BC         ((r.B << 8) + r.C)
+#define MERGE_DE         ((r.D << 8) + r.E)
+#define MERGE_HL         ((r.H << 8) + r.L)
+#define MERGE(LO, HI)    (((HI) << 8) + (LO))
+
+#define LO(x)           ((x) & 0x0f)
+#define HI(x)           ((x) >> 4)
 
 #define IS_BDH(x) ((x) == REG_B || (x) == REG_D || (x) == REG_H)
 

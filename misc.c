@@ -64,7 +64,7 @@ uint8_t *get_reg(uint8_t code)
         case REG_H: { return &(r.H); } break;
         case REG_L: { return &(r.L); } break;
                     /* pseudo-register M = memory cell addressed by H & L registers */
-        case REG_M: { return &( mem[ADDR_HL] ); } break;
+        case REG_M: { return &( mem[MERGE_HL] ); } break;
         case REG_A: { return &(r.A); } break;
         default: { fail(); return NULL; }
     }
