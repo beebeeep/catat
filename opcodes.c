@@ -852,6 +852,20 @@ void jmp(uint8_t addr_l, uint8_t addr_h)
     r.PC = MERGE(addr_l, addr_h);
 }
 
+void jc(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|1|1|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(F_CARRY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
 void jnc(uint8_t addr_l, uint8_t addr_h)
 {
     /* +-+-+-+-+-+-+-+-+
@@ -863,7 +877,7 @@ void jnc(uint8_t addr_l, uint8_t addr_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(F_CARRY) r.PC = MERGE(addr_l, addr_h);
+    if(F_CARRY(r.F)) r.PC = MERGE(addr_l, addr_h);
 }
 
 void jz(uint8_t addr_l, uint8_t addr_h)
@@ -877,7 +891,7 @@ void jz(uint8_t addr_l, uint8_t addr_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(F_ZERO) r.PC = MERGE(addr_l, addr_h);
+    if(F_ZERO(r.F)) r.PC = MERGE(addr_l, addr_h);
 }
 
 void jnz(uint8_t addr_l, uint8_t addr_h)
@@ -891,7 +905,7 @@ void jnz(uint8_t addr_l, uint8_t addr_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(!F_ZERO) r.PC = MERGE(addr_l, addr_h);
+    if(!F_ZERO(r.F)) r.PC = MERGE(addr_l, addr_h);
 }
 
 void jm(uint8_t addr_l, uint8_t addr_h)
@@ -905,7 +919,7 @@ void jm(uint8_t addr_l, uint8_t addr_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(F_SIGN) r.PC = MERGE(addr_l, addr_h);
+    if(F_SIGN(r.F)) r.PC = MERGE(addr_l, addr_h);
 }
 
 void jp(uint8_t addr_l, uint8_t addr_h)
@@ -919,9 +933,22 @@ void jp(uint8_t addr_l, uint8_t addr_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(!F_SIGN) r.PC = MERGE(addr_l, addr_h);
+    if(!F_SIGN(r.F)) r.PC = MERGE(addr_l, addr_h);
 }
 
+void jpe(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|1|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
 void jpo(uint8_t addr_l, uint8_t addr_h)
 {
     /* +-+-+-+-+-+-+-+-+
@@ -933,5 +960,262 @@ void jpo(uint8_t addr_l, uint8_t addr_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(!F_PARITY) r.PC = MERGE(addr_l, addr_h);
+    if(!F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+/* =============== CALL SUBROUTINE INSTRUCTIONS ========================== */
+
+void call(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|1|1|0|1|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    r.PC = MERGE(addr_l, addr_h);
+}
+
+void cc(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+--+-+
+     * |1|1|0|1|1|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(F_CARRY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cnc(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|1|0|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(!F_CARRY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cz(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|1|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(F_ZERO(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cnz(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|0|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(!F_ZERO(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cm(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|1|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(F_SIGN(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cp(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|0|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(!F_SIGN(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cpe(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|1|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void cpo(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|0|1|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[--r.SP] = HI(r.PC);
+    mem[--r.SP] = LO(r.PC);
+    if(!F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+/* =============== RETURN FROM SUBROUTINE INSTRUCTIONS===================== */
+
+void ret(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|1|0|0|1|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    r.PC = MERGE(addr_l, addr_h);
+}
+
+void rc(void)
+{
+    /* +-+-+-+-+-+--+-+
+     * |1|1|0|1|1|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(F_CARRY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rnc(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|1|0|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(!F_CARRY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rz(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|1|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(F_ZERO(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rnz(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|0|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(!F_ZERO(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rm(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|1|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(F_SIGN(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rp(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|0|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(!F_SIGN(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rpe(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|1|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+void rpo(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|0|0|0|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    uint8_t addr_l = mem[r.SP++];
+    uint8_t addr_h = mem[r.SP++];
+    if(!F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
 }
