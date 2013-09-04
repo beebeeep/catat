@@ -260,7 +260,8 @@ void ana(uint8_t Ri)
      * Note that official Intel 8080 Programmers Manual says that
      * ANA doesn't affect the half-carry bit, but Soviet's i8080 clone,
      * КР580ВМ80А, sets half-carry bit according 
-     * fourth bit of accumulator register 
+     * fourth bit of accumulator register.
+     * This note can be also apllied to all AND/XOR instructions
      * XXX*/
     if(r.A & 0x08) SET_Th(r.F);
     else RESET_Th(r.F);
@@ -565,7 +566,7 @@ void mvi(uint8_t Ri, uint8_t data)
 void lxi(uint8_t Ri, uint8_t data_l, uint8_t data_h)
 {
     /* +-+-+-+-+-+-+-+-+
-     * |0|0|i|i|i|0|0|1|
+     * |0|0|i|i|0|0|0|1|
      * +-+-+-+-+-+-+-+-+
      * |d|d|d|d|d|d|d|d| LSB
      * +-+-+-+-+-+-+-+-+
@@ -573,42 +574,22 @@ void lxi(uint8_t Ri, uint8_t data_l, uint8_t data_h)
      * +-+-+-+-+-+-+-+-+
      * 7               0
      */
-    if(IS_BDH(Ri)) {
-        *(get_reg(Ri+1)) = data_l;
-        *(get_reg(Ri)) = data_h;
-    } else {
-        fail();
+    if(Ri == 0) {
+      r.B = data_h;
+      r.C = data_l;
+    } 
+    if(Ri == 1) {
+      r.D = data_h;
+      r.E = data_l;
     }
-    r.PC += 3;
-}
+    if(Ri == 2) {
+      r.H = data_h;
+      r.L = data_l;
+    }
+    if(Ri == 3) {
+      r.SP = MERGE(data_l, data_h);
+    }
 
-void sta(uint8_t addr_l, uint8_t addr_h)
-{
-    /* +-+-+-+-+-+-+-+-+
-     * |0|0|1|1|0|0|1|0|
-     * +-+-+-+-+-+-+-+-+
-     * |d|d|d|d|d|d|d|d| LSB
-     * +-+-+-+-+-+-+-+-+
-     * |d|d|d|d|d|d|d|d| MSB
-     * +-+-+-+-+-+-+-+-+
-     * 7               0
-     */
-    mem[MERGE(addr_l, addr_h)] = r.A;
-    r.PC += 3;
-}
-
-void lda(uint8_t addr_l, uint8_t addr_h)
-{
-    /* +-+-+-+-+-+-+-+-+
-     * |0|0|1|1|1|0|1|0|
-     * +-+-+-+-+-+-+-+-+
-     * |d|d|d|d|d|d|d|d| LSB
-     * +-+-+-+-+-+-+-+-+
-     * |d|d|d|d|d|d|d|d| MSB
-     * +-+-+-+-+-+-+-+-+
-     * 7               0
-     */
-    r.A = mem[MERGE(addr_l, addr_h)];
     r.PC += 3;
 }
 
@@ -726,6 +707,93 @@ void ani(uint8_t data)
     set_szp_flags(r.A, &r.F);
 }
 
+void xri(uint8_t data) 
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|1|1|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    r.A = r.A ^ data;
+
+    RESET_Tc(r.F);
+    if(r.A & 0x08) SET_Th(r.F);
+    else RESET_Th(r.F);
+    set_szp_flags(r.A, &r.F);
+}
+
+void ori(uint8_t data) 
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|0|1|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    r.A = r.A | data;
+
+    RESET_Tc(r.F);
+    if(r.A & 0x08) SET_Th(r.F);
+    else RESET_Th(r.F);
+    set_szp_flags(r.A, &r.F);
+}
+
+void cpi(uint8_t data) 
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|1|1|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    /* carry bit is set if Ri is greater than accumulator */
+    if(data > r.A) SET_Tc(r.F);
+    else RESET_Tc(r.F);
+
+    /* half-carry and SZP flags are set as it would be 'sub Ri' operation */
+    uint8_t half_carry = ((r.A & 0x0f) < (data & 0x0f));
+    if(half_carry) SET_Th(r.F);
+    else RESET_Th(r.F);
+
+    set_szp_flags(r.A - data, &r.F);
+}
+
+/* ====================== DIRECT ADDRESSING INSTRUCTIONS ================== */
+
+void sta(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |0|0|1|1|0|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    mem[MERGE(addr_l, addr_h)] = r.A;
+    r.PC += 3;
+}
+
+void lda(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |0|0|1|1|1|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    r.A = mem[MERGE(addr_l, addr_h)];
+    r.PC += 3;
+}
+
 void shld(uint8_t addr_l, uint8_t addr_h)
 {
     /* +-+-+-+-+-+-+-+-+
@@ -758,6 +826,8 @@ void lhld(uint8_t addr_l, uint8_t addr_h)
     r.PC += 3;
 }
 
+/* ========================== JUMP INSTRUCTIONS ========================== */
+
 void pchl(void) 
 {
     /* +-+-+-+-+-+-+-+-+
@@ -768,4 +838,100 @@ void pchl(void)
     r.PC = MERGE(r.L, r.H);
 }
 
+void jmp(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|0|0|1|1|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    r.PC = MERGE(addr_l, addr_h);
+}
 
+void jnc(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|1|0|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(F_CARRY) r.PC = MERGE(addr_l, addr_h);
+}
+
+void jz(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|1|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(F_ZERO) r.PC = MERGE(addr_l, addr_h);
+}
+
+void jnz(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|0|0|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(!F_ZERO) r.PC = MERGE(addr_l, addr_h);
+}
+
+void jm(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|0|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(F_SIGN) r.PC = MERGE(addr_l, addr_h);
+}
+
+void jp(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|1|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(!F_SIGN) r.PC = MERGE(addr_l, addr_h);
+}
+
+void jpo(uint8_t addr_l, uint8_t addr_h)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|0|0|0|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| LSB = addr_l
+     * +-+-+-+-+-+-+-+-+
+     * |d|d|d|d|d|d|d|d| MSB = addr_h
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    if(!F_PARITY) r.PC = MERGE(addr_l, addr_h);
+}
