@@ -451,7 +451,7 @@ void dad(uint8_t Ri)
     else RESET_Tc(r.F);
 
     b += a;
-    
+
     r.L = LO(b);
     r.H = HI(b);
 }
@@ -472,7 +472,7 @@ void inx(uint8_t Ri)
     if(Ri == 3) a = r.SP;
 
     a++;
-    
+
     r.L = LO(a);
     r.H = HI(a);
 }
@@ -493,7 +493,7 @@ void dcx(uint8_t Ri)
     if(Ri == 3) a = r.SP;
 
     a--;
-    
+
     r.L = LO(a);
     r.H = HI(a);
 }
@@ -575,19 +575,19 @@ void lxi(uint8_t Ri, uint8_t data_l, uint8_t data_h)
      * 7               0
      */
     if(Ri == 0) {
-      r.B = data_h;
-      r.C = data_l;
+        r.B = data_h;
+        r.C = data_l;
     } 
     if(Ri == 1) {
-      r.D = data_h;
-      r.E = data_l;
+        r.D = data_h;
+        r.E = data_l;
     }
     if(Ri == 2) {
-      r.H = data_h;
-      r.L = data_l;
+        r.H = data_h;
+        r.L = data_l;
     }
     if(Ri == 3) {
-      r.SP = MERGE(data_l, data_h);
+        r.SP = MERGE(data_l, data_h);
     }
 
     r.PC += 3;
@@ -1218,4 +1218,67 @@ void rpo(void)
     uint8_t addr_l = mem[r.SP++];
     uint8_t addr_h = mem[r.SP++];
     if(!F_PARITY(r.F)) r.PC = MERGE(addr_l, addr_h);
+}
+
+/* =================== INTERRUPT FLIP-FLOP INSTRUCTIONS ==================== */
+
+void ei(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|1|0|1|1|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+
+    /* enable interrupts */
+}
+
+void di(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|1|1|0|0|1|1|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+
+    /* disable interrupts */
+}
+
+/* ===================== INPUT/OUTPUT INSTRUCTIONS ========================= */
+
+void in(uint8_t number)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|1|1|0|1|1|
+     * +-+-+-+-+-+-+-+-+
+     * |n|n|n|n|n|n|n|n| 
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    r.A = input_data(number);
+}
+
+void out(uint8_t number)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |1|1|0|1|0|0|1|1|
+     * +-+-+-+-+-+-+-+-+
+     * |n|n|n|n|n|n|n|n| 
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+    output_data(r.A, number);
+}
+
+/* ====================== HALT INSTRUCTIONS ============================== */
+
+void hlt(void)
+{
+    /* +-+-+-+-+-+-+-+-+
+     * |0|1|1|1|0|1|1|0|
+     * +-+-+-+-+-+-+-+-+
+     * 7               0
+     */
+
+    /* enter STOPPED state until interrupt occurs */
 }
